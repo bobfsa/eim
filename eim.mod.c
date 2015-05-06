@@ -20,6 +20,7 @@ __attribute__((section("__versions"))) = {
 	{ 0xa06cb60e, "module_layout" },
 	{ 0x6bc3fbc0, "__unregister_chrdev" },
 	{ 0x1d7d4310, "platform_driver_probe" },
+	{ 0x3ce4ca6f, "disable_irq" },
 	{ 0xf9a482f9, "msleep" },
 	{ 0x67c2fa54, "__copy_to_user" },
 	{ 0x2e5810c6, "__aeabi_unwind_cpp_pr1" },

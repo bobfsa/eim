@@ -989,13 +989,18 @@ static int   fpga_remove(struct platform_device *pdev)
 	volatile unsigned long value=0;
 	int retval;
 
+	//tasklet_kill(&rxtasklet);
+
+
 	if(eim_chan)
 		dma_release_channel(eim_chan);
+	if(rxdma_buffer_phys)
+		dma_unmap_single(NULL, rxdma_buffer_phys,pdata->buffer_len, DMA_FROM_DEVICE);
 
-	dma_unmap_single(NULL, rxdma_buffer_phys,pdata->buffer_len, DMA_FROM_DEVICE);
 	free_pages(pdata->buffer_base, BUFFER_PAGE_ORDER);
 
 	free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
+	tasklet_kill(&rxtasklet);
 	devm_iounmap(&pdev->dev, pdata->ram_base);
 	clk_put(pdata->clk);
 	gpio_free(FPGAINTR_GPIO);

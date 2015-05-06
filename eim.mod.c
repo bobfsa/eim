@@ -39,6 +39,7 @@ __attribute__((section("__versions"))) = {
 	{ 0xd3d57d53, "device_create" },
 	{ 0xb1d7c92, "platform_device_unregister" },
 	{ 0xd6b8e852, "request_threaded_irq" },
+	{ 0x82072614, "tasklet_kill" },
 	{ 0x67c02674, "platform_device_register" },
 	{ 0x93fca811, "__get_free_pages" },
 	{ 0xbd7083bc, "_raw_spin_lock_irqsave" },

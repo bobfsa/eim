@@ -989,13 +989,19 @@ static int   fpga_remove(struct platform_device *pdev)
 	volatile unsigned long value=0;
 	int retval;
 
+	disable_irq(gpio_to_irq(FPGAINTR_GPIO));
+	free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
 	if(eim_chan)
 		dma_release_channel(eim_chan);
+	if(rxdma_buffer_phys)
+		dma_unmap_single(NULL, rxdma_buffer_phys,pdata->buffer_len, DMA_FROM_DEVICE);
 
-	dma_unmap_single(NULL, rxdma_buffer_phys,pdata->buffer_len, DMA_FROM_DEVICE);
 	free_pages(pdata->buffer_base, BUFFER_PAGE_ORDER);
 
-	free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
+	//free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
+	tasklet_disable(&rxtasklet);
+	tasklet_kill(&rxtasklet);
+
 	devm_iounmap(&pdev->dev, pdata->ram_base);
 	clk_put(pdata->clk);
 	gpio_free(FPGAINTR_GPIO);
@@ -1003,6 +1009,7 @@ static int   fpga_remove(struct platform_device *pdev)
 	iounmap(pdata->iomux_base);
 	iounmap(pdata->ccm_base);
 	iounmap(pdata->eim_cs0_base);
+	return ;
 }
 
 

@@ -24,7 +24,7 @@
 #include <linux/delay.h>
 
 /**about FPGA_DATADEP**/
-#define RB_CAP 	14400  
+#define RB_CAP 	15600  
 
 typedef struct
 {	

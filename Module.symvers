@@ -1,0 +1,2 @@
+0x3771b461	crc_ccitt	lib/crc-ccitt	EXPORT_SYMBOL
+0x75811312	crc_ccitt_table	lib/crc-ccitt	EXPORT_SYMBOL

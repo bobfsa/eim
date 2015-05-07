@@ -3,7 +3,7 @@
 
 static struct class *eimfpga_class;
 
-////test for git
+
 
 #define EIMFPGA_MAJOR 		197
 #define EIMFPGA_DRVNAME 	"eimfpga"
@@ -188,10 +188,10 @@ int eimfpga_release(struct inode *inode, struct file *filp)
 {
 }
 
-#define FPGA_DATADEP 7200
+#define FPGA_DATADEP 7800
 search_frame_state search_state=frame_none;
 static int fpga_isr_cnt=0;
-unsigned short fpgadata[FPGA_DATADEP] __attribute__((aligned(64)));
+unsigned short fpgadata[FPGA_DATADEP*2] __attribute__((aligned(64)));
 
 extern unsigned long memcpy_neon(void *dst, void *src, unsigned long size);
 
@@ -989,20 +989,13 @@ static int   fpga_remove(struct platform_device *pdev)
 	volatile unsigned long value=0;
 	int retval;
 
-	//tasklet_kill(&rxtasklet);
-
-	disable_irq(gpio_to_irq(FPGAINTR_GPIO));
-	free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
 	if(eim_chan)
 		dma_release_channel(eim_chan);
-	if(rxdma_buffer_phys)
-		dma_unmap_single(NULL, rxdma_buffer_phys,pdata->buffer_len, DMA_FROM_DEVICE);
 
+	dma_unmap_single(NULL, rxdma_buffer_phys,pdata->buffer_len, DMA_FROM_DEVICE);
 	free_pages(pdata->buffer_base, BUFFER_PAGE_ORDER);
 
-	//free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
-	tasklet_disable(&rxtasklet);
-	tasklet_kill(&rxtasklet);
+	free_irq(gpio_to_irq(FPGAINTR_GPIO), pdev);
 	devm_iounmap(&pdev->dev, pdata->ram_base);
 	clk_put(pdata->clk);
 	gpio_free(FPGAINTR_GPIO);
@@ -1010,7 +1003,6 @@ static int   fpga_remove(struct platform_device *pdev)
 	iounmap(pdata->iomux_base);
 	iounmap(pdata->ccm_base);
 	iounmap(pdata->eim_cs0_base);
-	return ;
 }
 
 

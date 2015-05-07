@@ -1,0 +1,4 @@
+make -C /home/bobfsa/fsa_work/code/imx6_3035sdk/i_MX6QSABRELite/kernel-source/linux-3.0 M=/home/bobfsa/fsa_work/code/imx6_3035sdk/i_MX6QSABRELite/app_drv/eim_fpga
+make[1]: Entering directory `/home/bobfsa/fsa_work/code/imx6_3035sdk/i_MX6QSABRELite/kernel-source/linux-3.0'
+  CC [M]  /home/bobfsa/fsa_work/code/imx6_3035sdk/i_MX6QSABRELite/app_drv/eim_fpga/eim_fpga.o
+make[1]: Leaving directory `/home/bobfsa/fsa_work/code/imx6_3035sdk/i_MX6QSABRELite/kernel-source/linux-3.0'

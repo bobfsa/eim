@@ -29,4 +29,4 @@ all:
 
 .PHONY: clean
 clean:
-	rm -f *.mod.c *.mod.o *.ko *.o *.tmp_versions
+	rm -f *.mod.c *.mod.o .*.o.cmd *.ko *.o *.tmp_versions

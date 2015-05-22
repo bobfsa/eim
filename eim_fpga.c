@@ -182,6 +182,20 @@ ssize_t  eimfpga_read(struct file *filp, char __user *buf, size_t count,loff_t *
 
 ssize_t eimfpga_write(struct file *filp, char *buf, size_t count,loff_t *f_pos)
 {
+	eimfpga_info *pdata;
+	volatile unsigned long value;
+
+	pdata=(eimfpga_info *)filp->private_data;
+	//reset FIFO
+	value=__raw_readl(pdata->gpio6_base+GPIO6_DR);
+	value |= 0x00000800;
+	__raw_writel(value, pdata->gpio6_base+GPIO6_DR);
+	msleep(500);
+	value=__raw_readl(pdata->gpio6_base+GPIO6_DR);
+	value &= (~0x00000800);
+	__raw_writel(value, pdata->gpio6_base+GPIO6_DR);	
+	printk("%s \n", __func__);
+	return 0;
 }
 
 int eimfpga_release(struct inode *inode, struct file *filp)

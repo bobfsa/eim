@@ -190,7 +190,7 @@ ssize_t eimfpga_write(struct file *filp, char *buf, size_t count,loff_t *f_pos)
 	value=__raw_readl(pdata->gpio6_base+GPIO6_DR);
 	value |= 0x00000800;
 	__raw_writel(value, pdata->gpio6_base+GPIO6_DR);
-	msleep(500);
+	msleep(100);
 	value=__raw_readl(pdata->gpio6_base+GPIO6_DR);
 	value &= (~0x00000800);
 	__raw_writel(value, pdata->gpio6_base+GPIO6_DR);	
@@ -202,7 +202,7 @@ int eimfpga_release(struct inode *inode, struct file *filp)
 {
 }
 
-#define FPGA_DATADEP 7800
+#define FPGA_DATADEP 8480
 search_frame_state search_state=frame_none;
 static int fpga_isr_cnt=0;
 unsigned short fpgadata[FPGA_DATADEP*2] __attribute__((aligned(64)));
@@ -280,7 +280,7 @@ int eimfpga_rxfunc(struct work_struct *work)
 	end=prb->buffer+prb->size;
 	
 	for(index=0;index<FPGA_DATADEP;)
-	{
+	{
 		u16value=*(u16 *)(pdata->ram_base);
 
 		if(search_state==frame_none && u16value != MAGIC_NUMBER)

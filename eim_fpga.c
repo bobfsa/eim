@@ -288,7 +288,7 @@ int eimfpga_rxfunc(struct work_struct *work)
 			//printk("#");
 			continue ;
 		}
-
+		printk("0x%x \n", u16value);
 		if( search_state==frame_none && u16value==MAGIC_NUMBER)
 		{
 			search_state=frame_magic;

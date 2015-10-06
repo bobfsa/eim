@@ -233,7 +233,7 @@ int eimfpga_rxfunc(unsigned long param)
 #else
 int eimfpga_rxfunc(struct work_struct *work)
 #endif
-{
+{
 #ifdef EIM_WORK
 	eimfpga_info *pdata=&fpga_info;
 #endif
@@ -261,18 +261,6 @@ int eimfpga_rxfunc(struct work_struct *work)
 	//volatile unsigned long delay=0;
 	int *data=(int *)(pdata->buffer_base);
 	
-#if 0
-	spin_lock_irqsave(&(pdata->rb.spinlock), irqflags);	
-	for(index=0;index<FPGA_DATADEP;index++)
-	{
-		u16value=*(u16 *)(pdata->ram_base);
-		//if(index%128 == 0)
-		//	printk("0x%x ", u16value);
-	}
-	spin_unlock_irqrestore(&(pdata->rb.spinlock), irqflags);	
-#endif
-
-#if 1
 	search_state=frame_none;
 	//end_splcnt=(pdata->rb.buffer+pdata->rb.size-pdata->rb.wr)/sizeof(u16);
 	wr_splcnt=0;
@@ -314,20 +302,9 @@ int eimfpga_rxfunc(struct work_struct *work)
 		}
 
 		fpgadata[index]=u16value;
-	#if 0	
-		*dataptr++=u16value;
-		//dataptr++;
-		wr_splcnt++;
-		if(dataptr>=end)
-		{
-			dataptr=prb->buffer;
-		}	
-	#endif
 		index++;			
 	}
-#if 1
 
-	#if 1
 	spin_lock_irqsave(&(prb->spinlock), irqflags);
 
 	wr_splcnt=FPGA_DATADEP;
@@ -343,15 +320,9 @@ int eimfpga_rxfunc(struct work_struct *work)
 		memcpy_neon((u8 *)prb->buffer, &(fpgadata[first/sizeof(short)]),FPGA_DATADEP*sizeof(short)-first);
 		prb->wr=pdata->rb.buffer+FPGA_DATADEP*sizeof(short)-first;
 	}	
-	#endif
 
-	//prb->wr+=(FPGA_DATADEP*sizeof(short));
-	//if(prb->wr >=end)
-	//	prb->wr-=prb->size;
 	
 	cap=DISTANCE((u32)(prb->wr), (u32)(prb->rd), (u32)(prb->size));
-	//prb->wr=(u8 *)dataptr;
-	//printk("cap 0x%x: 0x%x 0x%x \t", cap,prb->wr,prb->rd);
 	if(cap < RB_CAP)
 	{
 		cap=RB_CAP-cap;
@@ -361,19 +332,12 @@ int eimfpga_rxfunc(struct work_struct *work)
 		if(prb->rd>=end)
 			prb->rd-=prb->size;
 
-		//printk(" **0x%x  0x%x\n", cap, prb->currlen);
 	}
 	else
 	{
-		//prb->currlen+=(wr_splcnt*sizeof(u16));
 		prb->currlen+=(FPGA_DATADEP*sizeof(u16));
-		//printk(" $$ 0x%x\n", prb->currlen);
 	}
 	spin_unlock_irqrestore(&(prb->spinlock), irqflags);
-	//printk("0x%x\n", prb->currlen);
-#endif
-
-#endif
 }
 
 
@@ -621,31 +585,6 @@ static int fpga_probe(struct platform_device *pdev)
 	if (pdev != &fpga_pfdev)
 		return -ENODEV;
 
-#ifdef FPGA_DMA
-#if 0
-	dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
-		
-	pdata->buffer_len=BUFFER_SIZE;
-	pdata->buffer_base=(u32)dma_alloc_coherent(NULL, BUFFER_SIZE, &rxdma_buffer_phys, GFP_KERNEL|GFP_DMA);
-	printk("dma_alloc_coherent vaddr: 0x%x dma_addr:0x%x\n",pdata->buffer_base, rxdma_buffer_phys);
-	//pdata->buffer_base=(u32)dma_alloc_coherent(NULL, BUFFER_SIZE/2, &rxdma_buffer_phys, GFP_KERNEL|GFP_DMA);
-	//printk("dma_alloc_coherent vaddr: 0x%x dma_addr:0x%x\n",pdata->buffer_base, rxdma_buffer_phys);
-	
-	dma_cap_zero(eim_dma_mask);
-	dma_cap_set(DMA_SLAVE, eim_dma_mask);
-
-	eim_dma_data.priority =DMA_PRIO_MEDIUM;/* DMA_PRIO_HIGH;*/
-	eim_dma_data.dma_request = MX6Q_DMA_REQ_EXT_DMA_REQ_1;
-	eim_dma_data.peripheral_type = IMX_DMATYPE_MEMORY;/*IMX_DMATYPE_FIFO_MEMORY;*/
-	eim_chan = dma_request_channel(eim_dma_mask, filter, &eim_dma_data);
-	printk("dma chan: 0x%x\n", eim_chan);
-	if(eim_chan == 0)
-	{
-		printk("dma_request_channel err\n");
-		return -1;
-	}
-#endif
-#endif
 
 #if 1
 	order=get_order(BUFFER_SIZE);
@@ -666,69 +605,7 @@ static int fpga_probe(struct platform_device *pdev)
 
 	printk("virt_to_bus addr: 0x%x\n",virt_to_bus((void *)pdata->buffer_base));
 #endif
-	
-#ifdef FPGA_DMA
 
-#if 0
-	//sg_init_one(&eim_rx_sg,  pdata->buffer_base,  0x8000);  
-	//printk("chan:0x%x 0x%x 0x%x\n", eim_chan, eim_chan->device, eim_chan->device->device_prep_dma_memcpy);
-	sg_init_table(eim_rx_sg, SG_NUM);
-	for (index = 0; index < SG_NUM; index++) 
-	{
-			sg_set_buf(&eim_rx_sg[index],pdata->buffer_base + index * 0x8000,0x8000);
-	}
-
-	if (dma_map_sg(eim_chan->device->dev, eim_rx_sg, SG_NUM, DMA_DEV_TO_MEM) != SG_NUM) {
-		printk("unable to map RX DMA\n");
-		return -1;
-	}	
-	eim_rx_sg[0].dma_address=rxdma_buffer_phys;
-	eim_rx_sg[1].dma_address=rxdma_buffer_phys+sg_dma_len(&eim_rx_sg[0]);
-	
-	for(index=0;index<SG_NUM;index++)
-	{
-		printk("sg %d addr&len: 0x%x 0x%x\n", index, sg_dma_address(&eim_rx_sg[index]),sg_dma_len(&eim_rx_sg[index]));
-	}
-
-	eimdma_slave_config.direction= DMA_DEV_TO_MEM;            
-	eimdma_slave_config.src_addr = EIMRAM_BASE;
-	eimdma_slave_config.src_addr_width= DMA_SLAVE_BUSWIDTH_4_BYTES;
-	eimdma_slave_config.src_maxburst=1200;
-	//eimdma_slave_config.dst_addr= rxdma_buffer_phys;        
-	//eimdma_slave_config.dst_addr_width= DMA_SLAVE_BUSWIDTH_4_BYTES;
-	//eimdma_slave_config.dst_maxburst=1200;
-	retval=dmaengine_slave_config(eim_chan, &eimdma_slave_config);
-	if(retval)
-	{
-		printk("dmaengine_slave_config err: %d\n", retval);
-	}
-
-
-  	//sg_dma_address(&eim_rx_sg) = rxdma_buffer_phys;
-	//sg_dma_len(&eim_rx_sg) =  FPGA_DATADEP*4;
-	//dma_flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT| 
-	//	DMA_COMPL_SKIP_DEST_UNMAP |DMA_COMPL_SKIP_DEST_UNMAP|DMA_PREP_CONTINUE;
-	//dma_flags=DMA_PREP_INTERRUPT|DMA_COMPL_SKIP_DEST_UNMAP|DMA_COMPL_SKIP_SRC_UNMAP;
-	//dma_flags=DMA_CTRL_ACK|DMA_PREP_INTERRUPT|DMA_COMPL_SKIP_DEST_UNMAP|DMA_COMPL_SKIP_SRC_UNMAP;
-	dma_flags=DMA_CTRL_ACK|DMA_PREP_INTERRUPT;
-	if(eim_chan)
-	{
-		//printk("chan:0x%x 0x%x 0x%x\n", eim_chan, eim_chan->device, eim_chan->device->device_prep_dma_memcpy);
-		//dma_rxdesc = eim_chan->device->device_prep_dma_memcpy(eim_chan,
-		//	 rxdma_buffer_phys, EIMRAM_BASE, FPGA_DATADEP, dma_flags);
-		dma_rxdesc=eim_chan->device->device_prep_slave_sg(eim_chan, eim_rx_sg, SG_NUM, DMA_DEV_TO_MEM, dma_flags);
-	}
-	else
-	{
-		printk("eim dma chan err\n");
-	}
-
-	if (!dma_rxdesc) {
-		printk("unable to prep FPGA DMA\n");
-	}
-#endif
-
-#endif
 
 	memset(&(pdata->rb), 0, sizeof(ringbuffer));
 	pdata->rb.buffer=(u8 *)pdata->buffer_base;
@@ -755,12 +632,12 @@ static int fpga_probe(struct platform_device *pdev)
 	//printk("%s gpio_base:0x%x\n", __func__, pdata->gpio_base);
 	value=__raw_readl(pdata->gpio_base+GPIO2_GDIR);
 	//printk("pre GPIO2_GDIR :0x%x\n", value);
-	value |= (0x00002000);
+	value |= (0x0000e000);
 	__raw_writel(value, pdata->gpio_base+GPIO2_GDIR);
 
 	value=__raw_readl(pdata->gpio_base+GPIO2_DR);
 	//printk("pre GPIO2_DR :0x%x\n", value);
-	value &= ~(0x00002000);
+	value &= ~(0x0000e000);
 	//value |= 0x00002000;
 	//value|=0x00004000;
 	__raw_writel(value, pdata->gpio_base+GPIO2_DR);
@@ -882,7 +759,7 @@ static int fpga_probe(struct platform_device *pdev)
 	//__raw_writel(0x07f1f001, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
 #ifdef NONMUX
 	//0x0191009f
-	__raw_writel(0x019100bf, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
+	__raw_writel(0x019300bf, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
     	__raw_writel(0x00000000, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR2_OFFSET);
 #else
 	__raw_writel(0x07f1f007, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);

@@ -253,6 +253,7 @@ int eimfpga_rxfunc(struct work_struct *work)
 	unsigned long end_splcnt=0,wr_splcnt;
 	unsigned long irqflags;	
 	unsigned short u16value;
+	unsigned long u32value;
 	unsigned long frmlen=0;
 	unsigned long cap=0;
 	unsigned long first=0;
@@ -280,15 +281,17 @@ int eimfpga_rxfunc(struct work_struct *work)
 	end=prb->buffer+prb->size;
 	
 	for(index=0;index<FPGA_DATADEP;)
-	{
-		u16value=*(u16 *)(pdata->ram_base);
-
+	{
+		//u16value=*(u16 *)(pdata->ram_base);
+		u32value=*(u32 *)(pdata->ram_base);
+		
+		u16value=(unsigned short)u32value;
 		if(search_state==frame_none && u16value != MAGIC_NUMBER)
 		{
-			//printk("#");
+			printk("$");
 			continue ;
 		}
-		printk("0x%x \n", u16value);
+		//printk("0x%x \n", u32value);
 		if( search_state==frame_none && u16value==MAGIC_NUMBER)
 		{
 			search_state=frame_magic;

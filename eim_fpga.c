@@ -759,8 +759,8 @@ static int fpga_probe(struct platform_device *pdev)
 	//__raw_writel(0x07f1f001, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
 #ifdef NONMUX
 	//0x0191009f
-	__raw_writel(0x019300bf, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
-    	__raw_writel(0x00000000, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR2_OFFSET);
+	__raw_writel(0x05c3c0bf, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
+    	__raw_writel(0x00000001, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR2_OFFSET);
 #else
 	__raw_writel(0x07f1f007, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR1_OFFSET);
     	__raw_writel(0x00001800, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_GCR2_OFFSET);
@@ -778,8 +778,8 @@ static int fpga_probe(struct platform_device *pdev)
 	 *	APR = 1 (Async Page Read);
 	 *	PAT = 4 (6 EIM clock sycles)
 	 */
-	__raw_writel(0x01000000, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_RCR1_OFFSET);
-    	__raw_writel(0x00000008, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_RCR2_OFFSET);
+	__raw_writel(0x07000003, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_RCR1_OFFSET);
+    	__raw_writel(0x00000338, pdata->eim_cs0_base+EIM_CSn_OFFSET(0)+EIM_RCR2_OFFSET);
 		
 	/*
 	 * For EIM Write Configuration registers.

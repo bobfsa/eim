@@ -137,47 +137,6 @@ ssize_t  eimfpga_read(struct file *filp, char __user *buf, size_t count,loff_t *
 		copy_to_user(buf, rdptr, count);
 	
 	return count;
-
-	
-#if 0
-	ringbuffer *rb=filp->private_data;
-	unsigned long irqflags;
-	int ret=0;
-	u8 *read=NULL;
-	
-	mutex_lock(&uppmutex);	
-	if(! rb)
-		return 0;
-	
-	spin_lock_irqsave(&upp_rwlock, irqflags);
-
-	if(rb->buffer+rb->size-rb->rd <count)
-	{
-		count=rb->buffer+rb->size-rb->rd;
-	}
-	
-	read=rb->rd;
-	if(rb->currlen < count)
-	{
-		ret=rb->currlen;
-	}
-	else
-	{
-		ret=count;
-	}
-	rb->rd+=ret;
-	rb->currlen-=ret;
-	
-	if(rb->rd >=(rb->buffer+rb->size))
-		rb->rd=rb->buffer;	
-	//printk("3");
-
-	spin_unlock_irqrestore(&upp_rwlock, irqflags);
-	mutex_unlock(&uppmutex);
-	
-	//printk("4");
-	copy_to_user(buf, read, ret);
-#endif
 }
 
 ssize_t eimfpga_write(struct file *filp, char *buf, size_t count,loff_t *f_pos)
@@ -228,21 +187,12 @@ static void eim_dma_callback(void *para)
 	return ;
 }
 
-#ifdef EIM_TASKLET
 int eimfpga_rxfunc(unsigned long param)
-#else
-int eimfpga_rxfunc(struct work_struct *work)
-#endif
 {
-#ifdef EIM_WORK
-	eimfpga_info *pdata=&fpga_info;
-#endif
-#ifdef EIM_TASKLET
 	eimfpga_info *pdata=(eimfpga_info *)param;
-#endif
 	ringbuffer *prb=&(pdata->rb);
 	int index=0;
-	unsigned long v1,v2,v3,v4;
+	static unsigned long isrcnt=0;
 	unsigned long frame_start=0;
 	unsigned short prevalue=0;
 	unsigned long err_cnt=0;
@@ -257,35 +207,49 @@ int eimfpga_rxfunc(struct work_struct *work)
 	unsigned long cap=0;
 	unsigned long first=0;
 	unsigned long end=0;
-	//volatile unsigned long delay=0;
 	int *data=(int *)(pdata->buffer_base);
 	
-#if 0
-	spin_lock_irqsave(&(pdata->rb.spinlock), irqflags);	
-	for(index=0;index<FPGA_DATADEP;index++)
-	{
-		u16value=*(u16 *)(pdata->ram_base);
-		//if(index%128 == 0)
-		//	printk("0x%x ", u16value);
-	}
-	spin_unlock_irqrestore(&(pdata->rb.spinlock), irqflags);	
-#endif
 
-#if 1
 	search_state=frame_none;
-	//end_splcnt=(pdata->rb.buffer+pdata->rb.size-pdata->rb.wr)/sizeof(u16);
 	wr_splcnt=0;
-	//spin_lock_irqsave(&(prb->spinlock), irqflags);
 	dataptr=(u16 *)prb->wr;
 	end=prb->buffer+prb->size;
+	isrcnt++;
+
+#if 1
+	do
+	{
+		u16value = *(u16 *)(pdata->ram_base);
+		if(u16value != MAGIC_NUMBER)
+			printk("$$%d  ", isrcnt);
+	}while(u16value != MAGIC_NUMBER);
 	
+	index=0;
+	fpgadata[index++]=u16value;
+	
+	do
+	{
+		u16value = *(u16 *)(pdata->ram_base);
+		if(u16value == 0)
+			printk("state err %d  ", isrcnt);
+	}while(u16value == 0);
+	fpgadata[index++]=u16value;
+
+	for(;index<FPGA_DATADEP;index++)
+	{
+		fpgadata[index] = *(u16 *)(pdata->ram_base);	
+		//fpgadata[index++]=u16value;
+	}
+#endif
+
+#if 0
 	for(index=0;index<FPGA_DATADEP;)
 	{
 		u16value=*(u16 *)(pdata->ram_base);
 
 		if(search_state==frame_none && u16value != MAGIC_NUMBER)
 		{
-			//printk("#");
+			printk("$:%d:%d ", isrcnt, index);
 			continue ;
 		}
 
@@ -311,20 +275,10 @@ int eimfpga_rxfunc(struct work_struct *work)
 		}
 
 		fpgadata[index]=u16value;
-	#if 0	
-		*dataptr++=u16value;
-		//dataptr++;
-		wr_splcnt++;
-		if(dataptr>=end)
-		{
-			dataptr=prb->buffer;
-		}	
-	#endif
 		index++;			
 	}
-#if 1
+#endif
 
-	#if 1
 	spin_lock_irqsave(&(prb->spinlock), irqflags);
 
 	wr_splcnt=FPGA_DATADEP;
@@ -340,37 +294,23 @@ int eimfpga_rxfunc(struct work_struct *work)
 		memcpy_neon((u8 *)prb->buffer, &(fpgadata[first/sizeof(short)]),FPGA_DATADEP*sizeof(short)-first);
 		prb->wr=pdata->rb.buffer+FPGA_DATADEP*sizeof(short)-first;
 	}	
-	#endif
 
-	//prb->wr+=(FPGA_DATADEP*sizeof(short));
-	//if(prb->wr >=end)
-	//	prb->wr-=prb->size;
 	
 	cap=DISTANCE((u32)(prb->wr), (u32)(prb->rd), (u32)(prb->size));
-	//prb->wr=(u8 *)dataptr;
-	//printk("cap 0x%x: 0x%x 0x%x \t", cap,prb->wr,prb->rd);
 	if(cap < RB_CAP)
 	{
 		cap=RB_CAP-cap;
-		//prb->currlen+=((wr_splcnt*sizeof(u16))-cap);
 		prb->currlen+=((FPGA_DATADEP*sizeof(u16))-cap);
 		prb->rd+=cap;
 		if(prb->rd>=end)
 			prb->rd-=prb->size;
 
-		//printk(" **0x%x  0x%x\n", cap, prb->currlen);
 	}
 	else
 	{
-		//prb->currlen+=(wr_splcnt*sizeof(u16));
 		prb->currlen+=(FPGA_DATADEP*sizeof(u16));
-		//printk(" $$ 0x%x\n", prb->currlen);
 	}
 	spin_unlock_irqrestore(&(prb->spinlock), irqflags);
-	//printk("0x%x\n", prb->currlen);
-#endif
-
-#endif
 }
 
 
@@ -393,10 +333,8 @@ static int fpga_isr(int irq, void *dev_id)
 	unsigned short u16value;
 	unsigned long frmlen=0;
 	unsigned long cap=0;
-	//volatile unsigned long delay=0;
 	int *data=(int *)(pdata->buffer_base);
 
-	//return IRQ_HANDLED;
 	
 	value=__raw_readl(pdata->gpio6_base+GPIO6_ISR);
 	if((value & 0x00004000) !=0x0)
@@ -405,139 +343,18 @@ static int fpga_isr(int irq, void *dev_id)
 	}
 
 	value|=(0x00004000);
-	//value|=0xffffffff;
 	__raw_writel(value, pdata->gpio6_base+GPIO6_ISR);
 
 	prevalue=0;
 	frame_start=0;
 	zero_cnt=0;	
 	
-	//for(index=0;index<FPGA_DATADEP;index++)
-	{
-	//	u16value=*(u32 *)(pdata->ram_base);
-		//printk("0x%x ", u16value);
-		//printk("$");
-	}
 
 #ifdef EIM_TASKLET
 	tasklet_schedule(&rxtasklet);
 	return IRQ_HANDLED;
 #endif
 
-#ifdef EIM_WORK
-	schedule_work(&eimrxwork);
-	return IRQ_HANDLED;
-#endif
-
-#ifdef FPGA_DMA	
-#if 0
-	memset(data, 0, 4096);
-	dma_rxdesc->callback = eim_dma_callback;
-	dma_rxdesc->callback_param = pdata;
-	cookie = dma_rxdesc->tx_submit(dma_rxdesc);
-	if(dma_submit_error(cookie))
-	{
-		printk("unable to submit FPGA DMA\n");
-	}
-	//dma_async_issue_pending(eim_chan);
-
-	
-	zero_cnt=0;
-	#if 0
-	while(1)
-	{
-		dmastat=eim_chan->device->device_tx_status(eim_chan,cookie, &state);
-		if(dmastat == DMA_SUCCESS)
-			break;
-		zero_cnt++;
-		//printk("0x%x\n", dmastat);			
-		if(zero_cnt >= 0x1000000)
-			break;
-	}
-	printk("%s dmastat:%d \n", __func__, dmastat);
-	#endif
-#endif	
-#endif
-
-
-//#ifndef FPGA_DMA
-#if 0
-
-	for(index=0;index<(FPGA_DATADEP);index++)
-	{
-		u16value=*(u32 *)(pdata->ram_base);
-		printk("0x%x\t", u16value);
-	}
-#if 0	
-	search_state=frame_none;
-	//end_splcnt=(pdata->rb.buffer+pdata->rb.size-pdata->rb.wr)/sizeof(u16);
-	wr_splcnt=0;
-	spin_lock_irqsave(&(pdata->rb.spinlock), irqflags);
-	dataptr=(u16 *)pdata->rb.wr;
-	
-
-
-	for(index=0;index<FPGA_DATADEP;)
-	{
-		//fpgadata[index]=*(u32 *)(pdata->ram_base);
-		u16value=*(u32 *)(pdata->ram_base);
-
-		//for(delay=0;delay<10000;delay++);
-
-		if(search_state==frame_none && u16value != MAGIC_NUMBER)
-			continue ;
-
-		if( search_state==frame_none && u16value==MAGIC_NUMBER)
-		{
-			search_state=frame_magic;
-		}
-		else if(search_state==frame_magic && u16value!=0)
-		{
-			frmlen=(u16value-4)/sizeof(u16);
-			search_state=frame_len;
-		}
-		else if(search_state==frame_len)
-		{
-			frmlen--;
-			if(frmlen == 0)
-				search_state=frame_none;
-		}
-		else
-		{
-			printk("state err: 0x%x 0x%x \n", u16value, search_state);
-		}
-		*dataptr=u16value;
-		dataptr++;
-		wr_splcnt++;
-		if(dataptr>=(pdata->rb.buffer+pdata->rb.size))
-		{
-			dataptr=pdata->rb.buffer;
-		}	
-		index++;			
-	}
-
-	cap=DISTANCE((u32)(dataptr), (u32)(pdata->rb.rd), (u32)(pdata->rb.size));
-	pdata->rb.wr=(u8 *)dataptr;
-
-	if(cap < RB_CAP)
-	{
-		cap=RB_CAP-cap;
-		pdata->rb.currlen+=((wr_splcnt*sizeof(u16))-cap);
-		pdata->rb.rd+=cap;
-		if(pdata->rb.rd>=(pdata->rb.buffer+pdata->rb.size))
-			pdata->rb.rd-=pdata->rb.size;
-	}
-	else
-	{
-		pdata->rb.currlen+=(wr_splcnt*sizeof(u16));
-	}
-	spin_unlock_irqrestore(&(pdata->rb.spinlock), irqflags);
-#endif
-	
-#endif
-
-
-	return IRQ_HANDLED;
 }
 
 

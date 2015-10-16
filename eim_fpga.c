@@ -228,18 +228,9 @@ static void eim_dma_callback(void *para)
 	return ;
 }
 
-#ifdef EIM_TASKLET
 int eimfpga_rxfunc(unsigned long param)
-#else
-int eimfpga_rxfunc(struct work_struct *work)
-#endif
 {
-#ifdef EIM_WORK
-	eimfpga_info *pdata=&fpga_info;
-#endif
-#ifdef EIM_TASKLET
 	eimfpga_info *pdata=(eimfpga_info *)param;
-#endif
 	ringbuffer *prb=&(pdata->rb);
 	int index=0;
 	unsigned long v1,v2,v3,v4;
@@ -258,13 +249,10 @@ int eimfpga_rxfunc(struct work_struct *work)
 	unsigned long cap=0;
 	unsigned long first=0;
 	unsigned long end=0;
-	//volatile unsigned long delay=0;
 	int *data=(int *)(pdata->buffer_base);
 	
 	search_state=frame_none;
-	//end_splcnt=(pdata->rb.buffer+pdata->rb.size-pdata->rb.wr)/sizeof(u16);
 	wr_splcnt=0;
-	//spin_lock_irqsave(&(prb->spinlock), irqflags);
 	dataptr=(u16 *)prb->wr;
 	end=prb->buffer+prb->size;
 	
@@ -272,11 +260,11 @@ int eimfpga_rxfunc(struct work_struct *work)
 	{
 		//u16value=*(u16 *)(pdata->ram_base);
 		u32value=*(u32 *)(pdata->ram_base);
-		
+		//printk("0x%x ",u32value);	
 		u16value=(unsigned short)u32value;
 		if(search_state==frame_none && u16value != MAGIC_NUMBER)
 		{
-			printk("$");
+			//printk("$");
 			continue ;
 		}
 		//printk("0x%x \n", u32value);
@@ -304,7 +292,7 @@ int eimfpga_rxfunc(struct work_struct *work)
 		fpgadata[index]=u16value;
 		index++;			
 	}
-
+	//printk("0x%x \n", u32value);
 	spin_lock_irqsave(&(prb->spinlock), irqflags);
 
 	wr_splcnt=FPGA_DATADEP;
